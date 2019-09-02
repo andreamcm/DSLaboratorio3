@@ -24,6 +24,10 @@ summary(datos)
 
 class(datos)
 
+########################################################
+############ DIESEL   ##################################
+########################################################
+
 #Transformar NA´s en 0´s
 datos$Diesel[is.na(datos$Diesel)] <- 0
 datos$DieselLS[is.na(datos$DieselLS)] <- 0
@@ -50,18 +54,24 @@ acf(datos_diesel)
 #Verifiacion de varianza
 autoplot(acf(datos_diesel, plot = FALSE))
 
+decomp = stl(datos_diesel, s.window="periodic")
+var <- seasadj(decomp)
+plot(decomp)
+count_d1 = diff(var, differences = 1)
+plot(count_d1)
+
 #Pruebas
-adf.test(diff(log(datos_diesel)), alternative="stationary", k=0)
-pp.test(diff(log(datos_diesel), alternative="stationary"))
+adf.test(count_d1, alternative="stationary", k=0)
+pp.test(count_d1, alternative="stationary")
 
 #Nuevo grafico
-plot(decompose(diff(log(datos_diesel))))
+plot(decompose(count_d1))
 
 #MODELO ARIMA
-ndiffs(datos_diesel)
-nsdiffs(datos_diesel)
+ndiffs(count_d1)
+nsdiffs(count_d1)
 
-fitARIMAdl <- arima(datos_diesel, order=c(1,1,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+fitARIMAdl <- arima(count_d1, order=c(1,1,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
 coeftest(fitARIMAdl)
 confint(fitARIMAdl)
 
@@ -71,7 +81,11 @@ plot(boxresult[,3],main= "Ljung-Box Q Test", ylab= "P-values", xlab= "Lag")
 qqnorm(fitARIMAdl$residuals)
 qqline(fitARIMAdl$residuals)
 
-auto.arima(datos_diesel, trace=TRUE)
+auto.arima(count_d1, trace=TRUE)
+
+modeloarimadiesel<-auto.arima(count_d1, seasonal=FALSE)
+modeloarimadiesel
+tsdisplay(residuals(modeloarimadiesel), lag.max=10, main='(3,1,1) Diesel Model Residuals')
 
 #Prediccion 2020
 predict(fitARIMAdl,n.ahead = 5)
