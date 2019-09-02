@@ -1,10 +1,18 @@
+#install.packages("forecast")
 library(forecast)
+#install.packages("tseries")
 library(tseries)
+#install.packages("ggfortify")
 library(ggfortify)
+#install.packages("fUnitRoots")
 library(fUnitRoots)
+#install.packages("lmtest")
 library(lmtest)
-library(FitAR)
+install.packages("FitAR")
+#library(FitAR)
+library(ggplot2)
 
+setwd("~/2019/UVG/Segundo Semestre/DataScience/Laboratorios/Laboratorio3/DSLaboratorio3")
 setwd("C:/Users/DELL/Documents/UVG/VIII_Semestre/Data Science/DSLaboratorio3")
 
 # --------------------
@@ -119,3 +127,69 @@ auto.arima(datos_regular, trace=TRUE)
 predict(fitARIMAreg,n.ahead = 5)
 futurValdl <- forecast(fitARIMAreg,h=10, level=c(99.5))
 plot(futurValdl)
+
+
+
+########################################################
+################## GASOLINA SUPER   ####################
+########################################################
+
+# Frecuencia
+str(datos)
+datos_super<-ts(datos$GasSuperior, start = c(2001,1), frequency = 12)
+print(datos_super)
+
+
+# Se traza la serie de tiempo para la gasolina superior
+autoplot(datos_super, ts.colour = "blue", ts.linetype = "dashed", xlab = "Time", ylab = "Diesel",
+         title = "Superior Gas behavior")
+
+
+# Se descomponen los datos
+plot(decompose(datos_regular))
+autoplot(stl(datos_regular, s.window = "periodic"), ts.colour = "blue")
+
+
+# Autocorrelación
+acf(datos_super)
+
+
+# Varianza
+autoplot(acf(datos_super, plot = FALSE))
+
+
+# Pruebas
+adf.test(diff(log(datos_super)), alternative="stationary", k=0)
+pp.test(diff(log(datos_super), alternative="stationary"))
+
+
+# Gráfico nuevo
+plot(decompose(diff(log(datos_super))))
+
+
+# Modelo arima
+ndiffs(datos_super)
+nsdiffs(datos_super)
+
+fitARIMAsup <- arima(datos_super, order=c(1,1,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+coeftest(fitARIMAsup)
+confint(fitARIMAsup)
+
+acf(fitARIMAsup$residuals,lag.max=140)
+boxresult=LjungBoxTest (fitARIMAsup$residuals,k=2,StartLag=1)
+plot(boxresult[,3],main= "Ljung-Box Q Test", ylab= "P-values", xlab= "Lag")
+qqnorm(fitARIMAsup$residuals)
+qqline(fitARIMAsup$residuals)
+
+auto.arima(datos_super, trace=TRUE)
+
+# Prediccion 2020
+predict(fitARIMAsup,n.ahead = 5)
+futurValdlSup <- forecast(fitARIMAsup,h=10, level=c(99.5))
+plot(futurValdlSup)
+
+
+
+
+
+
