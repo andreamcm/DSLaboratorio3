@@ -8,9 +8,12 @@ library(ggfortify)
 library(fUnitRoots)
 #install.packages("lmtest")
 library(lmtest)
-install.packages("FitAR")
-#library(FitAR)
+#install.packages("FitAR")
+library(FitAR)
 library(ggplot2)
+
+#En Box.test(x, lag = 1, type = c("Box-Pierce", "Ljung-Box"), fitdf = 0)  si p > 0.05 esta bien
+#RSS se le pasa el forecast, cercano a 0 es mejor (CARLOS 9)
 
 setwd("~/2019/UVG/Segundo Semestre/DataScience/Laboratorios/Laboratorio3/DSLaboratorio3")
 setwd("C:/Users/DELL/Documents/UVG/VIII_Semestre/Data Science/DSLaboratorio3")
@@ -42,7 +45,7 @@ print(datos_diesel)
 
 #Trazamos la serie de tiempo datos_diesel
 autoplot(datos_diesel, ts.colour = "blue", ts.linetype = "dashed", xlab = "Time", ylab = "Diesel",
-         title = "Diesel behavior")
+         main = "Diesel behavior")
 
 #Descomposicion
 plot(decompose(datos_diesel))
@@ -88,69 +91,71 @@ modeloarimadiesel<-auto.arima(count_d1, seasonal=FALSE)
 modeloarimadiesel
 tsdisplay(residuals(modeloarimadiesel), lag.max=10, main='(1,1,1)(1,0,0) Diesel Model Residuals')
 
-#Prediccion 2019
+#Prediccion 
 predict(fitARIMAdl,n.ahead = 5)
 futurValdl <- forecast(fitARIMAdl,h=35, level=c(95))
 plot(futurValdl)
 
 
 ########################################################
-################## GASOLINA SUPER   ####################
+################## GASOLINA REGULAR   ####################
 ########################################################
+#Transformamos los datos en una serie temporal 
+datos_regular<-ts(datos$GasRegular, start = c(2001,1), frequency = 12)
+print(datos_regular)
 
-# Frecuencia
-str(datos)
-datos_super<-ts(datos$GasSuperior, start = c(2001,1), frequency = 12)
-print(datos_super)
+#Trazamos la serie de tiempo datos_diesel
+autoplot(datos_regular, ts.colour = "blue", ts.linetype = "dashed", xlab = "Time", ylab = "Regular Gas",
+         main = "Regular Gasoline behavior")
 
-
-# Se traza la serie de tiempo para la gasolina superior
-autoplot(datos_super, ts.colour = "blue", ts.linetype = "dashed", xlab = "Time", ylab = "Diesel",
-         title = "Superior Gas behavior")
-
-
-# Se descomponen los datos
+#Descomposicion
 plot(decompose(datos_regular))
 autoplot(stl(datos_regular, s.window = "periodic"), ts.colour = "blue")
 
+#Autocorrelacion 
+acf(datos_regular, main = "Autocorrelacion de Gasolina Regular")
 
-# Autocorrelación
-acf(datos_super)
+#Verifiacion de varianza
+autoplot(acf(datos_regular, plot = FALSE))
 
+decomp = stl(datos_regular, s.window="periodic")
+var2 <- seasadj(decomp)
+plot(decomp)
+count_d2 = diff(var2, differences = 1)
+plot(count_d2)
 
-# Varianza
-autoplot(acf(datos_super, plot = FALSE))
+#Pruebas
+adf.test(count_d2, alternative="stationary", k=0)
+pp.test(count_d2, alternative="stationary")
 
+#Nuevo grafico
+plot(decompose(count_d2))
+plot(count_d2)
 
-# Pruebas
-adf.test(diff(log(datos_super)), alternative="stationary", k=0)
-pp.test(diff(log(datos_super), alternative="stationary"))
+#MODELO ARIMA
+ndiffs(count_d2)
+nsdiffs(count_d2)
 
+fitARIMAReg <- arima(count_d2, order=c(1,0,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+coeftest(fitARIMAReg)
+confint(fitARIMAReg)
 
-# Gráfico nuevo
-plot(decompose(diff(log(datos_super))))
-
-
-# Modelo arima
-ndiffs(datos_super)
-nsdiffs(datos_super)
-
-fitARIMAsup <- arima(datos_super, order=c(1,1,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
-coeftest(fitARIMAsup)
-confint(fitARIMAsup)
-
-acf(fitARIMAsup$residuals,lag.max=140)
-boxresult=LjungBoxTest (fitARIMAsup$residuals,k=2,StartLag=1)
+acf(fitARIMAReg$residuals,lag.max=140)
+boxresult=LjungBoxTest (fitARIMAReg$residuals,k=2,StartLag=1)
 plot(boxresult[,3],main= "Ljung-Box Q Test", ylab= "P-values", xlab= "Lag")
-qqnorm(fitARIMAsup$residuals)
-qqline(fitARIMAsup$residuals)
+qqnorm(fitARIMAReg$residuals)
+qqline(fitARIMAReg$residuals)
 
-auto.arima(datos_super, trace=TRUE)
+auto.arima(count_d2, trace=TRUE)
 
-# Prediccion 2020
-predict(fitARIMAsup,n.ahead = 5)
-futurValdlSup <- forecast(fitARIMAsup,h=10, level=c(99.5))
-plot(futurValdlSup)
+modeloarimaregular<-auto.arima(count_d2, seasonal=FALSE)
+modeloarimaregular
+tsdisplay(residuals(modeloarimaregular), lag.max=10, main='(1,0,1) Regular Gasoline Model Residuals')
+
+#Prediccion 
+predict(fitARIMAReg,n.ahead = 5)
+futurValReg2 <- forecast(fitARIMAReg,h=35, level=c(95))
+plot(futurValReg2)
 
 
 
