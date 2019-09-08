@@ -11,6 +11,7 @@ library(lmtest)
 #install.packages("FitAR")
 library(FitAR)
 library(ggplot2)
+library(pastecs)
 
 #En Box.test(x, lag = 1, type = c("Box-Pierce", "Ljung-Box"), fitdf = 0)  si p > 0.05 esta bien
 #RSS se le pasa el forecast, cercano a 0 es mejor (CARLOS 9)
@@ -97,11 +98,47 @@ modeloarimadiesel<-auto.arima(count_d1, seasonal=FALSE)
 modeloarimadiesel
 tsdisplay(residuals(modeloarimadiesel), lag.max=10, main='(1,1,1)(1,0,0) Diesel Model Residuals')
 
-#Prediccion 
-predict(fitARIMAdl,n.ahead = 5)
-futurValdl <- forecast(fitARIMAdl,h=35, level=c(95))
-plot(futurValdl)
+#Prediccion 2017 - 2019
+newdataDiesel <- datos[ which(datos$Anio>=2001 & datos$Anio<2017), ]
+newdataDiesel$Diesel[is.na(newdataDiesel$Diesel)] <- 0
+newdataDiesel$DieselLS[is.na(newdataDiesel$DieselLS)] <- 0
+newdataDiesel$DieselULS[is.na(newdataDiesel$DieselULS)] <- 0
 
+#Sumar columnas de tipos de Diesel en una sola 
+newdataDiesel$all_diesel <- rowSums( newdataDiesel[,9:11] )
+
+#Transformamos los datos en una serie temporal 
+datos_dieselPred<-ts(newdataDiesel$all_diesel, start = c(2001,1), frequency = 12)
+decompPr = stl(datos_dieselPred, s.window="periodic")
+vari <- seasadj(decompPr)
+pred = diff(vari, differences = 1)
+
+fitARIMAdlPRED <- arima(pred, order=c(1,1,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+
+predict(fitARIMAdlPRED,n.ahead = 36)
+futurValdl <- forecast(fitARIMAdlPRED,h=36, level=c(95))
+plot(futurValdl, main="Prediccion de valores de Diesel 2017-2019")
+
+#Prediccion 2019
+newdataDiesel <- datos[ which(datos$Anio>=2001 & datos$Anio<2019), ]
+newdataDiesel$Diesel[is.na(newdataDiesel$Diesel)] <- 0
+newdataDiesel$DieselLS[is.na(newdataDiesel$DieselLS)] <- 0
+newdataDiesel$DieselULS[is.na(newdataDiesel$DieselULS)] <- 0
+
+#Sumar columnas de tipos de Diesel en una sola 
+newdataDiesel$all_diesel <- rowSums( newdataDiesel[,9:11] )
+
+#Transformamos los datos en una serie temporal 
+datos_dieselPred<-ts(newdataDiesel$all_diesel, start = c(2001,1), frequency = 12)
+decompPr = stl(datos_dieselPred, s.window="periodic")
+vari <- seasadj(decompPr)
+pred = diff(vari, differences = 1)
+
+fitARIMAdlPRED <- arima(pred, order=c(1,1,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+
+predict(fitARIMAdlPRED,n.ahead = 12)
+futurValdl <- forecast(fitARIMAdlPRED,h=12, level=c(95))
+plot(futurValdl, main="Prediccion de valores de Diesel 2019")
 
 ########################################################
 ################## GASOLINA REGULAR   ####################
@@ -158,10 +195,29 @@ modeloarimaregular<-auto.arima(count_d2, seasonal=FALSE)
 modeloarimaregular
 tsdisplay(residuals(modeloarimaregular), lag.max=10, main='(1,0,1) Regular Gasoline Model Residuals')
 
-#Prediccion 
-predict(fitARIMAReg,n.ahead = 5)
-futurValReg2 <- forecast(fitARIMAReg,h=35, level=c(95))
-plot(futurValReg2)
+#Prediccion del 2017 al 2019
+newdataRegular <- datos[ which(datos$Anio>=2001 & datos$Anio<2017), ]
+datos_regularPred<-ts(newdataRegular$GasRegular, start = c(2001,1), frequency = 12)
+decompReg = stl(datos_regularPred, s.window="periodic")
+varreg <- seasadj(decompReg)
+predreg = diff(varreg, differences = 1)
+fitARIMARegpred <- arima(predreg, order=c(1,0,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+
+predict(fitARIMARegpred,n.ahead = 36)
+futurValReg2 <- forecast(fitARIMARegpred,h=36, level=c(95))
+plot(futurValReg2, main="Predicción de Gasolina Regular 2017-2019")
+
+#Prediccion del 2019
+newdataRegular <- datos[ which(datos$Anio>=2001 & datos$Anio<2019), ]
+datos_regularPred<-ts(newdataRegular$GasRegular, start = c(2001,1), frequency = 12)
+decompReg = stl(datos_regularPred, s.window="periodic")
+varreg <- seasadj(decompReg)
+predreg = diff(varreg, differences = 1)
+fitARIMARegpred <- arima(predreg, order=c(1,0,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+
+predict(fitARIMARegpred,n.ahead = 12)
+futurValReg2 <- forecast(fitARIMARegpred,h=12, level=c(95))
+plot(futurValReg2, main="Predicción de Gasolina Regular 2019")
 
 
 ########################################################
@@ -217,11 +273,48 @@ qqline(fitARIMAsup$residuals)
 
 auto.arima(datos_super, trace=TRUE)
 
-# Prediccion 2020
-predict(fitARIMAsup,n.ahead = 5)
-futurValdlSup <- forecast(fitARIMAsup,h=10, level=c(99.5))
-plot(futurValdlSup)
+# Prediccion 2017-2019
+newdataSuper <- datos[ which(datos$Anio>=2001 & datos$Anio<2017), ]
+datos_superPred <-ts(newdataSuper$GasSuperior, start = c(2001,1), frequency = 12)
+
+decompSup = stl(datos_superPred, s.window="periodic")
+varSup <- seasadj(decompSup)
+predSup = diff(varSup, differences = 1)
+fitARIMASupReg <- arima(predSup, order=c(1,0,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+
+predict(fitARIMASupReg,n.ahead = 36)
+futurValReg2 <- forecast(fitARIMASupReg,h=36, level=c(95))
+plot(futurValReg2, main="Predicción de Gasolina Super 2017-2019")
+
+# Prediccion año 2019
+newdataSuper <- datos[ which(datos$Anio>=2001 & datos$Anio<2019), ]
+datos_superPred <-ts(newdataSuper$GasSuperior, start = c(2001,1), frequency = 12)
+
+decompSup = stl(datos_superPred, s.window="periodic")
+varSup <- seasadj(decompSup)
+predSup = diff(varSup, differences = 1)
+fitARIMASupReg <- arima(predSup, order=c(1,0,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+
+predict(fitARIMASupReg,n.ahead = 12)
+futurValReg2 <- forecast(fitARIMASupReg,h=12, level=c(95))
+plot(futurValReg2, main="Predicción de Gasolina Super 2017-2019")
 
 
 
 
+#####DATOS#####
+DieselOrigin17 <- datos[ which(datos$Anio>=2017 ), ]
+DieselOrigin17$Diesel[is.na(DieselOrigin17$Diesel)] <- 0
+DieselOrigin17$DieselLS[is.na(DieselOrigin17$DieselLS)] <- 0
+DieselOrigin17$DieselULS[is.na(DieselOrigin17$DieselULS)] <- 0
+
+#Sumar columnas de tipos de Diesel en una sola 
+DieselOrigin17$all_diesel <- rowSums( DieselOrigin17[,9:11] )
+
+#Transformamos los datos en una serie temporal 
+dieselData<-ts(DieselOrigin17$all_diesel, start = c(2017,1), frequency = 12)
+dieselData
+
+RegularOrigin17 <- datos[ which(datos$Anio>=2017 ), ]
+RegularData<-ts(RegularOrigin17$GasRegular, start = c(2017,1), frequency = 12)
+RegularData
