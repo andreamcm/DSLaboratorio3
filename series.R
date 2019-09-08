@@ -22,6 +22,12 @@ setwd("C:/Users/DELL/Documents/UVG/VIII_Semestre/Data Science/DSLaboratorio3")
 # Lectura de los datos
 # --------------------
 datos <- read.csv("datosImp.csv")
+str(datos)
+datos$Anio
+datos2017 <- datos[ datos$Anio != 2018 & datos$Anio != 2019, ]
+datos2018_19 <- datos[ datos$Anio == 2018, ]
+datos2019 <- datos[ datos$Anio == 2019, ]
+datos2018_19 <- rbind(datos2018_19, datos2019)
 
 summary(datos)
 
@@ -32,15 +38,15 @@ class(datos)
 ########################################################
 
 #Transformar NA´s en 0´s
-datos$Diesel[is.na(datos$Diesel)] <- 0
-datos$DieselLS[is.na(datos$DieselLS)] <- 0
-datos$DieselULS[is.na(datos$DieselULS)] <- 0
+datos2017$Diesel[is.na(datos2017$Diesel)] <- 0
+datos2017$DieselLS[is.na(datos2017$DieselLS)] <- 0
+datos2017$DieselULS[is.na(datos2017$DieselULS)] <- 0
 
 #Sumar columnas de tipos de Diesel en una sola 
-datos$all_diesel <- rowSums( datos[,9:11] )
+datos2017$all_diesel <- rowSums( datos2017[,9:11] )
 
 #Transformamos los datos en una serie temporal 
-datos_diesel<-ts(datos$all_diesel, start = c(2001,1), frequency = 12)
+datos_diesel<-ts(datos2017$all_diesel, start = c(2001,1), frequency = 12)
 print(datos_diesel)
 
 #Trazamos la serie de tiempo datos_diesel
@@ -101,7 +107,7 @@ plot(futurValdl)
 ################## GASOLINA REGULAR   ####################
 ########################################################
 #Transformamos los datos en una serie temporal 
-datos_regular<-ts(datos$GasRegular, start = c(2001,1), frequency = 12)
+datos_regular<-ts(datos2017$GasRegular, start = c(2001,1), frequency = 12)
 print(datos_regular)
 
 #Trazamos la serie de tiempo datos_diesel
@@ -158,6 +164,63 @@ futurValReg2 <- forecast(fitARIMAReg,h=35, level=c(95))
 plot(futurValReg2)
 
 
+########################################################
+################## GASOLINA SUPER   ####################
+########################################################
+
+# Frecuencia
+str(datos2017)
+datos_super<-ts(datos2017$GasSuperior, start = c(2001,1), frequency = 12)
+print(datos_super)
+
+
+# Se traza la serie de tiempo para la gasolina superior
+autoplot(datos_super, ts.colour = "blue", ts.linetype = "dashed", xlab = "Time", ylab = "Diesel",
+         title = "Superior Gas behavior")
+
+
+# Se descomponen los datos
+plot(decompose(datos_regular))
+autoplot(stl(datos_regular, s.window = "periodic"), ts.colour = "blue")
+
+
+# Autocorrelación
+acf(datos_super)
+
+
+# Varianza
+autoplot(acf(datos_super, plot = FALSE))
+
+
+# Pruebas
+adf.test(diff(log(datos_super)), alternative="stationary", k=0)
+pp.test(diff(log(datos_super), alternative="stationary"))
+
+
+# Gráfico nuevo
+plot(decompose(diff(log(datos_super))))
+
+
+# Modelo arima
+ndiffs(datos_super)
+nsdiffs(datos_super)
+
+fitARIMAsup <- arima(datos_super, order=c(1,1,1),seasonal = list(order = c(1,0,0), period = 12),method="ML")
+coeftest(fitARIMAsup)
+confint(fitARIMAsup)
+
+acf(fitARIMAsup$residuals,lag.max=140)
+boxresult=LjungBoxTest (fitARIMAsup$residuals,k=2,StartLag=1)
+plot(boxresult[,3],main= "Ljung-Box Q Test", ylab= "P-values", xlab= "Lag")
+qqnorm(fitARIMAsup$residuals)
+qqline(fitARIMAsup$residuals)
+
+auto.arima(datos_super, trace=TRUE)
+
+# Prediccion 2020
+predict(fitARIMAsup,n.ahead = 5)
+futurValdlSup <- forecast(fitARIMAsup,h=10, level=c(99.5))
+plot(futurValdlSup)
 
 
 
